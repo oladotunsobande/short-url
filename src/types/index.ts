@@ -1,4 +1,7 @@
 import { Types } from 'mongoose';
+import { Response } from 'express';
+
+export type ResponseType = Response | void;
 
 export interface CreateLink {
   token: string;
@@ -8,6 +11,7 @@ export interface CreateLink {
 
 export interface UpdateLink {
   isActive?: boolean;
+  validityDays?: number;
   expiredAt?: Date;
 }
 
@@ -20,5 +24,6 @@ export type LinkQueryParameters = {
 
 export type LinkType = {
   linkId: Types.ObjectId;
+  token: string;
   shortLink: string;
 };

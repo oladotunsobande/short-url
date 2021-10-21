@@ -3,6 +3,7 @@ import express from 'express';
 import { Request, Response, NextFunction } from 'express';
 import morgan from 'morgan';
 import ResponseHandler from './util/response-handler';
+import appRoutes from './util/use-routes';
 
 const app = express();
 
@@ -12,6 +13,8 @@ app.use(urlencoded({ extended: true }));
 app.use(json());
 
 app.disable('x-powered-by');
+
+appRoutes(app);
 
 app.get('/', async (req: Request, res: Response) => {
   res.json({

@@ -34,33 +34,39 @@ class UrlCacheService {
   }
 
   async setURLInCache (
+    longURL: string,
     token: string, 
     linkId: Types.ObjectId,
+    shortLink: string,
   ) {
     const expirySeconds = parseInt(env.LINK_VALIDITY_DAYS) * 24 * 60 * 60;
 
     const payload = JSON.stringify({
       linkId,
-      shortLink: `${env.SERVICE_URL}/${token}`,
+      token,
+      shortLink,
     });
+
+    const urlBase64 = Buffer.from(longURL).toString('base64');
     
     return this.client
       .multi()
-      .set(token, payload)
-      .set(`${EVENT_PREFIX}:${token}`, String(linkId))
-      .expire(`${EVENT_PREFIX}:${token}`, expirySeconds)
+      .set(token, urlBase64)
+      .set(urlBase64, payload)
+      .set(`${EVENT_PREFIX}:${urlBase64}`, String(linkId))
+      .expire(`${EVENT_PREFIX}:${urlBase64}`, expirySeconds)
       .exec();
   }
 
   urlExpiryInCacheListener() {
     this.sub.on('message', async (channel: string, message: string) => {
       if (channel === EXPIRED_EVENTS_CHANNEL) {
-        const [prefix, key] = message.split(':');
+        const [prefix, urlBase64] = message.split(':');
   
         if (prefix === EVENT_PREFIX) {
-          const value: string | null = await redisAsync.get(key);
+          const value: string | null = await redisAsync.get(urlBase64);
           if (value) {
-            const { linkId, shortLink }: LinkType = JSON.parse(value);
+            const { linkId, token, shortLink }: LinkType = JSON.parse(value);
 
             const linkRecord = await LinkRepository.getOne(linkId);
             if (!linkRecord) {
@@ -77,7 +83,8 @@ class UrlCacheService {
             );
 
             logger.info(`[LINK CACHE] - Short link (${shortLink}) expired at ${new Date().toISOString()}`);
-            await redisAsync.del(key);
+            await redisAsync.del(urlBase64);
+            await redisAsync.del(token);
           }
         }
       }
