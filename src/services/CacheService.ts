@@ -1,0 +1,90 @@
+import { Types } from 'mongoose';
+import redis from 'redis';
+import * as env from '../config/env';
+import { redisAsync } from '../util/redis';
+import { ENVS } from '../constants';
+import { LinkType } from '../types';
+import {
+  EVENT_PREFIX,
+  EXPIRED_EVENTS_CHANNEL
+} from '../constants/redis';
+import { logger } from '../util/logger';
+import LinkRepository from '../repositories/LinkRepository';
+
+const url = `${env.REDIS_URL}/${env.REDIS_DATABASE}`;
+
+class UrlCacheService {
+  private client: redis.RedisClient;
+  private sub: redis.RedisClient;
+
+  constructor() {
+    this.client = redis.createClient(url);
+
+    if (env.NODE_ENV === ENVS.DEV) {
+      // Set keyspace notification config
+      this.client.on('ready', () => {
+        logger.info('Redis connection is READY');
+        this.client.config("SET", "notify-keyspace-events", "Ex");
+      });
+    }
+
+    // Set redis subscriber
+    this.sub = redis.createClient(url);
+    this.sub.setMaxListeners(0);
+  }
+
+  async setURLInCache (
+    token: string, 
+    linkId: Types.ObjectId,
+  ) {
+    const expirySeconds = parseInt(env.LINK_VALIDITY_DAYS) * 24 * 60 * 60;
+
+    const payload = JSON.stringify({
+      linkId,
+      shortLink: `${env.SERVICE_URL}/${token}`,
+    });
+    
+    return this.client
+      .multi()
+      .set(token, payload)
+      .set(`${EVENT_PREFIX}:${token}`, String(linkId))
+      .expire(`${EVENT_PREFIX}:${token}`, expirySeconds)
+      .exec();
+  }
+
+  urlExpiryInCacheListener() {
+    this.sub.on('message', async (channel: string, message: string) => {
+      if (channel === EXPIRED_EVENTS_CHANNEL) {
+        const [prefix, key] = message.split(':');
+  
+        if (prefix === EVENT_PREFIX) {
+          const value: string | null = await redisAsync.get(key);
+          if (value) {
+            const { linkId, shortLink }: LinkType = JSON.parse(value);
+
+            const linkRecord = await LinkRepository.getOne(linkId);
+            if (!linkRecord) {
+              logger.error('Link record not found');
+              return;
+            }
+
+            await LinkRepository.update(
+              linkId,
+              {
+                isActive: false,
+                expiredAt: new Date(),
+              },
+            );
+
+            logger.info(`[LINK CACHE] - Short link (${shortLink}) expired at ${new Date().toISOString()}`);
+            await redisAsync.del(key);
+          }
+        }
+      }
+    });
+    
+    this.sub.subscribe(EXPIRED_EVENTS_CHANNEL);
+  }
+}
+
+export default UrlCacheService;

@@ -8,9 +8,13 @@ export const NODE_ENV = throwIfUndefined(process.env.NODE_ENV, 'NODE_ENV');
 
 export const APP_PORT = throwIfUndefined(process.env.APP_PORT, 'APP_PORT');
 
-export const REDIS_HOST = throwIfUndefined(process.env.REDIS_HOST, 'REDIS_HOST');
+export const REDIS_URL = throwIfUndefined(process.env.REDIS_URL, 'REDIS_URL');
 
-export const REDIS_PORT = throwIfUndefined(process.env.REDIS_PORT, 'REDIS_PORT');
+export const REDIS_DATABASE = throwIfUndefined(process.env.REDIS_DATABASE, 'REDIS_DATABASE');
+
+export const LINK_VALIDITY_DAYS = throwIfUndefined(process.env.LINK_VALIDITY_DAYS, 'LINK_VALIDITY_DAYS');
+
+export const SERVICE_URL = throwIfUndefined(process.env.SERVICE_URL, 'SERVICE_URL');
 
 export const MONGO_URL =
   NODE_ENV === 'test'
