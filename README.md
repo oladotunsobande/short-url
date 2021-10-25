@@ -23,7 +23,7 @@ Install all dependencies:
 $ npm install
 ```
 
-Set the environment variables listed below:
+Create the `.env` file in the root directory and set the environment variables listed below:
 ```
 NODE_ENV=
 APP_PORT=
