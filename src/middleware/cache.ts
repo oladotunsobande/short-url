@@ -10,11 +10,11 @@ export async function cache(
 ): Promise<ResponseType> {
   const combinedPayload = { ...req.body, ...req.params };
 
-  const { url, token } = combinedPayload;
+  const { longURL, shortURL } = combinedPayload;
 
   try {
-    if (url) {
-      const urlBase64 = Buffer.from(url.trim()).toString('base64');
+    if (longURL) {
+      const urlBase64 = Buffer.from(longURL.trim()).toString('base64');
 
       const value = await redisAsync.get(urlBase64);
       if (value) {
@@ -23,10 +23,13 @@ export async function cache(
         return ResponseHandler.sendSuccessResponse({
           res,
           message: 'URL encoded successfully',
-          data: { encodedURL: shortLink },
+          data: { shortURL: shortLink },
         });
       }
-    } else if (token) {
+    } else if (shortURL) {
+      const pathname = new URL(shortURL.trim()).pathname;
+      const token = pathname.substring(1);
+
       const value = await redisAsync.get(token);
       if (value) {
         const longURL = Buffer.from (value, 'base64').toString('ascii');
@@ -37,12 +40,7 @@ export async function cache(
           data: { longURL },
         });
       }
-    } else {
-      return ResponseHandler.sendErrorResponse({
-        res,
-        error: 'Unrecognized parameter passed',
-      });
-    }
+    } 
 
     return next();
   } catch (error) {

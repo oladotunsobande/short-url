@@ -47,14 +47,15 @@ class UrlCacheService {
       shortLink,
     });
 
-    const urlBase64 = Buffer.from(longURL).toString('base64');
+    const shoreUrlBase64 = Buffer.from(shortLink).toString('base64');
+    const longUrlBase64 = Buffer.from(longURL).toString('base64');
     
     return this.client
       .multi()
-      .set(token, urlBase64)
-      .set(urlBase64, payload)
-      .set(`${EVENT_PREFIX}:${urlBase64}`, String(linkId))
-      .expire(`${EVENT_PREFIX}:${urlBase64}`, expirySeconds)
+      .set(shoreUrlBase64, longUrlBase64)
+      .set(longUrlBase64, payload)
+      .set(`${EVENT_PREFIX}:${longUrlBase64}`, String(linkId))
+      .expire(`${EVENT_PREFIX}:${longUrlBase64}`, expirySeconds)
       .exec();
   }
 

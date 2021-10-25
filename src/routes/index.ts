@@ -8,17 +8,24 @@ const router = express.Router();
 // Encode URL
 router.post(
   '/encode',
-  Validators.validateLinkEncodeDecode,
+  Validators.validateLinkEncode,
   CacheMiddleware.cache,
   Controllers.encodeURL,
 );
 
 // Decode URL
 router.post(
-  '/decode/:token',
+  '/decode',
   Validators.validateLinkDecode,
   CacheMiddleware.cache,
   Controllers.decodeURL,
+);
+
+// Get token details
+router.get(
+  '/statistics/:token',
+  Validators.validateGetTokenDetails,
+  Controllers.getTokenDetails,
 );
 
 export default router;

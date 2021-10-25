@@ -11,14 +11,12 @@ export async function encodeURL(
   res: Response,
   next: NextFunction,
 ): Promise<ResponseType> {
-  const { url } = req.body;
+  const { longURL } = req.body;
 
   try {
     let token: string;
 
-    let link = await LinkRepository.getOneBy({
-      longURL: url,
-    });
+    let link = await LinkRepository.getOneBy({ longURL });
     if (link) {
       await LinkRepository.update(
         link._id, 
@@ -34,7 +32,7 @@ export async function encodeURL(
 
       link = await LinkRepository.create({
         token,
-        longURL: url,
+        longURL,
         validityDays: parseInt(env.LINK_VALIDITY_DAYS),
       });
     }
@@ -43,7 +41,7 @@ export async function encodeURL(
 
     const urlCache = new UrlCacheService();
     urlCache.setURLInCache(
-      url,
+      longURL,
       token,
       link._id,
       shortLink,
@@ -53,7 +51,7 @@ export async function encodeURL(
     return ResponseHandler.sendSuccessResponse({
       res,
       message: 'URL encoded successfully',
-      data: { encodedURL: shortLink },
+      data: { shortURL: shortLink },
     });
   } catch (error) {
     return next(error);
@@ -65,10 +63,13 @@ export async function decodeURL(
   res: Response,
   next: NextFunction,
 ): Promise<ResponseType> {
-  const { token } = req.params;
+  const { shortURL } = req.body;
 
   try {
-    let link = await LinkRepository.getOneBy({ token });
+    const pathname = new URL(shortURL.trim()).pathname;
+    const token = pathname.substring(1);
+
+    const link = await LinkRepository.getOneBy({ token });
     if (!link) {
       return ResponseHandler.sendErrorResponse({
         res,
@@ -79,8 +80,36 @@ export async function decodeURL(
 
     return ResponseHandler.sendSuccessResponse({
       res,
-      message: 'URL decoded succesfully',
+      message: 'URL decoded successfully',
       data: { longURL: link.longURL },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getTokenDetails(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<ResponseType> {
+  const { token } = req.params;
+
+  try {
+    const link = await LinkRepository.getOneBy({ token });
+    if (!link) {
+      return ResponseHandler.sendErrorResponse({
+        res,
+        status: 404,
+        error: 'Link record does not exist',
+      });
+    }
+
+    link._id = undefined;
+
+    return ResponseHandler.sendSuccessResponse({
+      res,
+      data: { details: link },
     });
   } catch (error) {
     return next(error);

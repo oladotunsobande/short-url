@@ -17,19 +17,17 @@ export function randomizeMongoURL(url: string): string {
 }
 
 export function generateToken(): string {
-  const options = {
-    charset: 'alphanumeric',
-    length: 32,
-  };
-
   const randomNumber = Math.floor(Math.random() * 5) + 5;
 
-  const salt = randomstring.generate(options);
+  const salt = randomstring.generate({
+    charset: 'alphanumeric',
+    length: 32,
+  });
 
-  options.charset = 'numeric';
-  options.length = randomNumber;
-
-  const id = randomstring.generate(options);
+  const id = randomstring.generate({
+    charset: 'numeric',
+    length: randomNumber,
+  });
 
   const hashids = new Hashids(salt);
 
